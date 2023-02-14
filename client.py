@@ -1,44 +1,36 @@
-from socket import *
-import threading
-import time
+import pyaudio
+import numpy as np
+import socket
 
-def send(socket):
-    while True:
-        senddata = input('>>>')
-        socket.send(senddata.encode())
-        
-def recve(socket):
-    while True:
-        recvdata = socket.recv(1024)
-        print("상대방",recvdata.decode())
-        
-        
-host ="127.0.0.1"
-port = 9999
+CHUNK = 1024
+FORMAT = pyaudio.paInt8
+CHANNELS = 1
+RATE = 48000
 
-client_socket = socket(AF_INET,SOCK_STREAM)
-client_socket.connect((host,port))
+def recorder(stream):
+    data = stream.read(CHUNK, exception_on_overflow=False)
+    return data
 
-sender = threading.Thread(target = send, args = (client_socket,))
-recver = threading.Thread(target = recve, args = (client_socket,))
+def speaker(stream,data):
+    stream.write(data)
 
-sender.start()
-recver.start()
+def receive(client_socket):
+    return client_socket.recv(CHUNK)
 
-while True:
-    time.sleep(1)
-    pass
+def send(client_socket, data):
+    client_socket.sendall(data)
 
-"""
-def recv_data(client_socket):
-    while True:
-        data = client_socket.recv(1024)
-        print("recv:",repr(data.decode()))
+mic = pyaudio.PyAudio()
+mic_stream = mic.open(format=FORMAT,channels=CHANNELS,rate=RATE,input=True,frames_per_buffer=CHUNK)
 
+speaker_obj = pyaudio.PyAudio()
+speaker_stream = speaker_obj.open(format=FORMAT,channels=CHANNELS,rate=RATE,output=True,frames_per_buffer=CHUNK)
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect(('127.0.0.1', 9999))
 
 while True:
-    message = input('message : ')
-    if message == 'exit':
-        break
-    
-    client_socket.send(message.encode())"""
+    data = recorder(mic_stream)
+    send(client_socket, bytes(data))
+    data = receive(client_socket)
+    speaker(speaker_stream, data)
