@@ -1,9 +1,10 @@
 import pyaudio
 import numpy as np
 import socket
+import threading
 
-CHUNK = 1024
-FORMAT = pyaudio.paInt8
+CHUNK = 256
+FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 48000
 
@@ -15,22 +16,36 @@ def speaker(stream,data):
     stream.write(data)
 
 def receive(client_socket):
-    return client_socket.recv(CHUNK)
+    length = CHUNK*4
+    buf = []
+    while True:
+        buf += client_socket.recv(length)
+        if len(buf)>=length:
+            break
+    return bytes(buf)
 
 def send(client_socket, data):
     client_socket.sendall(data)
-
-mic = pyaudio.PyAudio()
-mic_stream = mic.open(format=FORMAT,channels=CHANNELS,rate=RATE,input=True,frames_per_buffer=CHUNK)
-
-speaker_obj = pyaudio.PyAudio()
-speaker_stream = speaker_obj.open(format=FORMAT,channels=CHANNELS,rate=RATE,output=True,frames_per_buffer=CHUNK)
+    
+sound_obj = pyaudio.PyAudio()
+mic_stream = sound_obj.open(format=FORMAT,channels=CHANNELS,rate=RATE,input=True,frames_per_buffer=CHUNK)
+speaker_stream = sound_obj.open(format=FORMAT,channels=CHANNELS,rate=RATE,output=True,frames_per_buffer=CHUNK)
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client_socket.connect(('127.0.0.1', 9999))
+client_socket.connect(('127.0.0.1', 10002))    
 
-while True:
-    data = recorder(mic_stream)
-    send(client_socket, bytes(data))
-    data = receive(client_socket)
-    speaker(speaker_stream, data)
+def writer(sock, mic_stream):
+    while True:
+        data = recorder(mic_stream)
+        send(client_socket, bytes(data))
+
+def reader(sock, speaker_stream):
+    while True:
+        data = receive(client_socket)
+        speaker(speaker_stream, data)
+
+writer_thread = threading.Thread(target=writer, args=(client_socket,)).start()
+reader_thread = threading.Thread(target=reader, args=(client_socket,)).start()
+
+writer_thread.join()
+reader_thread.join()
