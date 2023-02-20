@@ -10,13 +10,14 @@ RATE = 48000
 
 def writer(sock, mic_stream):
     while True:
-        data = sound.recorder(mic_stream)
-        net.send(client_socket, bytes(data))
+        data = recorder(mic_stream)
+        send(client_socket,bytes(data))
 
 def reader(sock, speaker_stream):
     while True:
-        data = net.receive(client_socket)
-        sound.speaker(speaker_stream, data)
+        data = receive(client_socket)
+        speaker(speaker_stream, data)
+        
 
 def handle_client(client_socket):
     sound_obj = pyaudio.PyAudio()
@@ -31,32 +32,38 @@ def handle_client(client_socket):
     writer_thread.join()
     reader_thread.join()
     
-class Sound:
-    def recorder(stream):
-        data = stream.read(CHUNK, exception_on_overflow=False)
-        return data
 
-    def speaker(stream, data):
-        stream.write(data)
+def recorder(stream):
+    data = stream.read(CHUNK, exception_on_overflow=False)
+    return data
 
-class Net:
-    def receive(client_socket):
-        length = CHUNK*4
-        buf = []
-        while True:
-            buf += client_socket.recv(length)
-            if len(buf)>=length:
-                break
-        return bytes(buf)
+def speaker(stream, data):
+    stream.write(data)
+    
+lock = threading.Lock()
 
-    def send(client_socket, data):
-        client_socket.sendall(data)
-        
-sound = Sound
-net = Net
+def receive(client_socket):
+    length = CHUNK*4
+    buf = bytearray()
+    while True:
+        data = client_socket.recv(length - len(buf))
+        buf += data
+        if len(buf) == length:
+            break
+    return bytes(buf)
+
+def send(client_socket, data):
+    lock.acquire()
+    try:
+        for c in client:
+            if c != client_socket:
+                continue
+            c.sendall(data)
+    finally:
+        lock.release()
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind(('127.0.0.1', 10002))
+server_socket.bind(('0.0.0.0', 10002))
 server_socket.listen(3)
 
 client = []
