@@ -8,7 +8,7 @@ FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 48000
 
-def writer(sock, mic_stream):
+def writer(mic_stream):
     while True:
         data = recorder(mic_stream)
         send(client_socket,bytes(data))
@@ -53,17 +53,10 @@ def receive(client_socket):
     return bytes(buf)
 
 def send(client_socket, data):
-    lock.acquire()
-    try:
-        for c in client:
-            if c != client_socket:
-                continue
-            c.sendall(data)
-    finally:
-        lock.release()
+    client_socket.sendall(data)
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind(('0.0.0.0', 10002))
+server_socket.bind(('0.0.0.0', 10002)) 
 server_socket.listen(3)
 
 client = []
