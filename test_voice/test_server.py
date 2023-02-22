@@ -8,39 +8,30 @@ FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 48000
 
-def writer(mic_stream):
+
+def handle_client(client_socket,client_address):
+    # 연결된 클라이언트 소켓을 리스트에 추가합니다.
+    client.append(client_socket)
+
+    print(f'Client {client_address} connected.')
+
+    # 클라이언트로부터 데이터를 받아서 모든 클라이언트에게 전송합니다.
     while True:
-        data = recorder(mic_stream)
-        send(client_socket,bytes(data))
+        # 클라이언트로부터 데이터를 받습니다.
+        data = client_socket.recv(1024)
+        if not data:
+            break
 
-def reader(sock, speaker_stream):
-    while True:
-        data = receive(client_socket)
-        speaker(speaker_stream, data)
-        
+        # 받은 데이터를 모든 클라이언트에게 전송합니다.
+        for cl in client:
+            # 자신에게는 보내지 않도록 조건문으로 필터링합니다.
+            if cl != client_socket:
+                cl.sendall(data)
 
-def handle_client(client_socket):
-    sound_obj = pyaudio.PyAudio()
-    speaker_stream = sound_obj.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK)
-    mic_stream = sound_obj.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
-        
-    writer_thread = threading.Thread(target=writer, args=(client_socket,mic_stream))
-    reader_thread = threading.Thread(target=reader, args=(client_socket,speaker_stream))
-    
-    writer_thread.start()
-    reader_thread.start()
-    writer_thread.join()
-    reader_thread.join()
-    
+    # 클라이언트 소켓을 리스트에서 제거합니다.
+    client.remove(client_socket)
 
-def recorder(stream):
-    data = stream.read(CHUNK, exception_on_overflow=False)
-    return data
-
-def speaker(stream, data):
-    stream.write(data)
-    
-lock = threading.Lock()
+    print(f'Client {client_address} disconnected.')
 
 def receive(client_socket):
     length = CHUNK*4
@@ -63,11 +54,12 @@ client = []
 
 while True:
     
-    client_socket, address = server_socket.accept()
-    print('연결 되었다 : ', address)
+    client_socket, client_address = server_socket.accept()
+    print('연결 되었다 : ', client_address)
     
-    client.append(client_socket)
-    client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+    client_thread = threading.Thread(target=handle_client, args=(client_socket,client_address))
     client_thread.start()
+    
+server_socket.close()
 
     
