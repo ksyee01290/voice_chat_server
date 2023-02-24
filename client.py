@@ -17,10 +17,10 @@ def speaker(stream,data):
 
 def receive(client_socket):
     length = CHUNK*4
-    buf = []
+    buf = bytearray()
     while True:
-        buf += client_socket.recv(length)
-        if len(buf)>=length:
+        buf += client_socket.recv(length - len(buf))
+        if len(buf) >= length:
             break
     return bytes(buf)
 
@@ -35,17 +35,27 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect(('127.0.0.1', 10002))    
 
 def writer(sock, mic_stream):
-    while True:
+    while not stop_event.is_set():
         data = recorder(mic_stream)
         send(client_socket, bytes(data))
 
 def reader(sock, speaker_stream):
-    while True:
+    while not stop_event.is_set():
         data = receive(client_socket)
         speaker(speaker_stream, data)
 
-writer_thread = threading.Thread(target=writer, args=(client_socket,)).start()
-reader_thread = threading.Thread(target=reader, args=(client_socket,)).start()
+stop_event = threading.Event()
+writer_thread = threading.Thread(target=writer, args=(client_socket,mic_stream))
+reader_thread = threading.Thread(target=reader, args=(client_socket,speaker_stream))
 
+writer_thread.start()
+reader_thread.start()
+
+while True:
+    user_input = input("Type 'exit' to stop: ")
+    if user_input == "exit":
+        stop_event.set()
+        break
+        
 writer_thread.join()
 reader_thread.join()
