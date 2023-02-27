@@ -32,7 +32,7 @@ def handle_client(client_socket,address):
 def run_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((HOST,PORT))
-    server_socket.listen(5)
+    server_socket.listen(10)
 
     print(f'server listening on {HOST}:{PORT}')
 
@@ -41,7 +41,7 @@ def run_server():
     
         client_thread = threading.Thread(target=handle_client, args=(client_socket,address))
         client_thread.start()
-
+ 
     server_socket.close()
 
 if __name__ == '__main__':

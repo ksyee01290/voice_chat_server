@@ -35,27 +35,28 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect(('127.0.0.1', 10002))    
 
 def writer(sock, mic_stream):
-    while not stop_event.is_set():
+    while True:
         data = recorder(mic_stream)
         send(client_socket, bytes(data))
 
 def reader(sock, speaker_stream):
-    while not stop_event.is_set():
+    while True:
         data = receive(client_socket)
         speaker(speaker_stream, data)
 
-stop_event = threading.Event()
+is_running = True
 writer_thread = threading.Thread(target=writer, args=(client_socket,mic_stream))
 reader_thread = threading.Thread(target=reader, args=(client_socket,speaker_stream))
+
 
 writer_thread.start()
 reader_thread.start()
 
-while True:
-    user_input = input("Type 'exit' to stop: ")
+while is_running:
+    user_input = input("'exit' 입력시 연결종료 : ")
     if user_input == "exit":
-        stop_event.set()
-        break
+        is_running = False
+        client_socket.close()
         
 writer_thread.join()
 reader_thread.join()
