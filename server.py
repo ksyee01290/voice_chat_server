@@ -9,10 +9,10 @@ clients = []
 def receive(client_socket):
     return client_socket.recv(1024)
 
-def send_all(clients,sender_socket,masseg):
+def send_all(clients, sender_socket, message):
     for client in clients:
-        if client != sender_socket:
-            client.sendall(masseg)
+        if client != sender_socket and client.fileno() != -1:
+            client.sendall(message)
 
 def handle_client(client_socket,address):
     clients.append(client_socket)
@@ -26,7 +26,6 @@ def handle_client(client_socket,address):
         send_all(clients,client_socket,data)
     
     clients.remove(client_socket)
-    
     print(f'client {address} discommected.')
     
 def run_server():

@@ -34,6 +34,7 @@ speaker_stream = sound_obj.open(format=FORMAT,channels=CHANNELS,rate=RATE,output
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect(('127.0.0.1', 10002))    
 
+
 def writer(sock, mic_stream):
     while True:
         data = recorder(mic_stream)
@@ -53,7 +54,7 @@ writer_thread.start()
 reader_thread.start()
 
 while is_running:
-    user_input = input("'exit' 입력시 연결종료 : ")
+    user_input = input("'exit' 입력시 : ")
     if user_input == "exit":
         is_running = False
         client_socket.close()
