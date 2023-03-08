@@ -11,22 +11,31 @@ def receive(client_socket):
 
 def send_all(clients, sender_socket, message):
     for client in clients:
-        if client != sender_socket and client.fileno() != -1:
-            client.sendall(message)
+        try:
+            if client != sender_socket and client.fileno() != -1:
+                client.sendall(message)
+        except:
+            clients.remove(client)
+            client.close()
 
-def handle_client(client_socket,address):
+def handle_client(client_socket, address):
     clients.append(client_socket)
-    print(f'client {address} commected.')
-    
+    print(f'client {address} connected.')
+
     while True:
-        data = receive(client_socket)
-        if not data:
+        try:
+            data = receive(client_socket)
+            if not data:
+                break
+            send_all(clients, client_socket, data)
+        except:
             break
-        
-        send_all(clients,client_socket,data)
-    
-    clients.remove(client_socket)
-    print(f'client {address} discommected.')
+
+    if client_socket in clients:
+        clients.remove(client_socket)
+        client_socket.close()
+
+    print(f'client {address} disconnected.')
     
 def run_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

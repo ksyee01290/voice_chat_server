@@ -19,7 +19,10 @@ def receive(client_socket):
     length = CHUNK*4
     buf = bytearray()
     while True:
-        buf += client_socket.recv(length - len(buf))
+        data = client_socket.recv(length - len(buf))
+        if not data:
+            return None
+        buf += data
         if len(buf) >= length:
             break
     return bytes(buf)

@@ -21,7 +21,7 @@ def receive(client_socket):
     while True:
         try:
             buf += client_socket.recv(length - len(buf))
-        except (ConnectionResetError, BrokenPipeError):
+        except:
             print("서버와의 연결이 끊어졌습니다.")
             client_socket.close()
             return None
@@ -32,7 +32,7 @@ def receive(client_socket):
 def send(client_socket, data):
     try:
         client_socket.sendall(data)
-    except (ConnectionResetError, BrokenPipeError):
+    except:
         print("서버와의 연결이 끊어졌습니다.")
         client_socket.close()
 
