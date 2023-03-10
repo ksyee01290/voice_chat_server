@@ -39,14 +39,25 @@ client_socket.connect(('127.0.0.1', 10002))
 
 
 def writer(sock, mic_stream):
-    while True:
-        data = recorder(mic_stream)
-        send(client_socket, bytes(data))
+    global is_running
+    while is_running:
+        try:
+            data = recorder(mic_stream)
+            send(sock, bytes(data))
+        except:
+            print('Connection lost. Closing socket.')
+            is_running = False
+            client_socket.close()
+            break
 
 def reader(sock, speaker_stream):
-    while True:
-        data = receive(client_socket)
-        speaker(speaker_stream, data)
+    global is_running
+    while is_running:
+        try:
+            data = receive(sock)
+            speaker(speaker_stream, data)
+        except:
+            break
 
 is_running = True
 writer_thread = threading.Thread(target=writer, args=(client_socket,mic_stream))
@@ -59,6 +70,7 @@ reader_thread.start()
 while is_running:
     user_input = input("'exit' 입력시 : ")
     if user_input == "exit":
+        client_socket.send("exit".encode())
         is_running = False
         client_socket.close()
         

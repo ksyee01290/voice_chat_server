@@ -21,26 +21,27 @@ def send_all(clients, sender_socket, message):
 def handle_client(client_socket, address):
     clients.append(client_socket)
     print(f'client {address} connected.')
-
-    while True:
-        try:
+    
+    try:
+        while True:
             data = receive(client_socket)
             if not data:
                 break
+            if data == "exit":  # 클라이언트가 "exit"를 보냈을 경우
+                break
             send_all(clients, client_socket, data)
-        except:
-            break
-
-    if client_socket in clients:
-        clients.remove(client_socket)
-        client_socket.close()
-
-    print(f'client {address} disconnected.')
+    except Exception as e:
+        print(f'client {address} error occurred: {e}')
+    finally:
+        if client_socket in clients:
+            clients.remove(client_socket)
+            client_socket.close()
+            print(f'client {address} disconnected.')
     
 def run_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((HOST,PORT))
-    server_socket.listen(10)
+    server_socket.listen(5)
 
     print(f'server listening on {HOST}:{PORT}')
 
