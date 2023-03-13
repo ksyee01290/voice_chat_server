@@ -4,16 +4,23 @@ import threading
 HOST = '127.0.0.1'
 PORT = 10002
 
+#clients_lock = threading.Lock() 
 clients = []
 
 def receive(client_socket):
-    return client_socket.recv(1024)
+    while True:
+        data = client_socket.recv(1024)
+        if not data:
+            break
+        send_all(clients, client_socket, data)
+    client_socket.close()
 
-def send_all(clients, sender_socket, message):
+def send_all(clients, sender_socket, sound_message):
+#   with clients_lock: # 락 오브젝트를 획득한 후 클라이언트 리스트 접근
     for client in clients:
         try:
             if client != sender_socket and client.fileno() != -1:
-                client.sendall(message)
+                client.sendall(sound_message)
         except:
             clients.remove(client)
             client.close()
@@ -21,22 +28,20 @@ def send_all(clients, sender_socket, message):
 def handle_client(client_socket, address):
     clients.append(client_socket)
     print(f'client {address} connected.')
-    
-    try:
-        while True:
-            data = receive(client_socket)
-            if not data:
-                break
-            if data == "exit":  # 클라이언트가 "exit"를 보냈을 경우
-                break
-            send_all(clients, client_socket, data)
-    except Exception as e:
-        print(f'client {address} error occurred: {e}')
-    finally:
-        if client_socket in clients:
-            clients.remove(client_socket)
-            client_socket.close()
-            print(f'client {address} disconnected.')
+
+    receive_thread = threading.Thread(target=receive, args=(client_socket,))
+    receive_thread.start()
+
+    send_thread = threading.Thread(target=send_all, args=(clients, client_socket,b''))
+    send_thread.start()
+
+    receive_thread.join()
+    send_thread.join()
+
+    if client_socket in clients:
+        client_socket.close()
+        clients.remove(client_socket)
+        print(f'client {address} disconnected.')
     
 def run_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
